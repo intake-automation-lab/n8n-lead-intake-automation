@@ -26,3 +26,10 @@ The links provided below are designated affiliate referral hooks. If you select 
 2. **Inject Onto Canvas:** Open your n8n workspace, click into a blank workflow canvas grid workspace, click the blank dots background once, and press **`Ctrl + V`** to snap the visual nodes directly into view.
 3. **Connect Access Identifiers:** Double-click the *Log to Google Sheets*, *Slack Notification*, and *Send Follow-up Email* nodes individually to connect your respective app configuration permissions.
 4. **Activate Live Ingestion:** Toggle the execution listener trigger switch to "Active" in the top-right control console to begin intercepting web form traffic automatically.
+---
+
+### 💼 Need a Custom Enterprise Setup or API Integration?
+If your organization requires a highly customized workflow, private API connections, advanced data sanitization logic, or custom CRM mapping arrays, you can bypass the manual setup entirely. 
+
+We build, test, and securely deploy custom production-grade automation infrastructure tailored exactly to your operations. 
+* 📧 **Contact for Development Rates:** `intakeautomationlab@gmail.com`
