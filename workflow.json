@@ -1,0 +1,147 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "options": {}
+      },
+      "id": "2ba856a9-a64d-4601-a0d4-87cfd2a60ff7",
+      "name": "Webhook - Lead Intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        64
+      ],
+      "webhookId": "lead-intake-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize incoming lead data into clean fields.\n// Works whether the source sends structured JSON fields already,\n// or a single raw text blob (e.g. from a simple form/embed).\nconst input = $input.first().json;\n\nlet name = input.name || input.Name || '';\nlet email = input.email || input.Email || '';\nlet company = input.company || input.Company || '';\nlet message = input.message || input.Message || '';\n\nconst rawText = input.rawText || input.text || input.formResponse || '';\n\nif (rawText && (!name || !email)) {\n  const nameMatch = rawText.match(/name\\s*[:\\-]\\s*(.+)/i);\n  const emailMatch = rawText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/);\n  const companyMatch = rawText.match(/company\\s*[:\\-]\\s*(.+)/i);\n  const messageMatch = rawText.match(/message\\s*[:\\-]\\s*([\\s\\S]+)/i);\n\n  if (!name && nameMatch) name = nameMatch[1].trim();\n  if (!email && emailMatch) email = emailMatch[1].trim();\n  if (!company && companyMatch) company = companyMatch[1].trim();\n  if (!message && messageMatch) message = messageMatch[1].trim();\n}\n\nif (!email) {\n  throw new Error('Lead intake parse failed: no valid email address found in submission.');\n}\n\nreturn [{\n  json: {\n    name: name ? name.trim() : 'Unknown',\n    email: email.trim(),\n    company: company ? company.trim() : 'Not provided',\n    message: message ? message.trim() : '',\n    receivedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "1f1efce7-8d48-41b2-8895-a8f8a09fdbfa",
+      "name": "Parse Lead Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "[INSERT_GOOGLE_SHEET_ID]",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{$json.name}}",
+            "Email": "={{$json.email}}",
+            "Company": "={{$json.company}}",
+            "Message": "={{$json.message}}",
+            "Received At": "={{$json.receivedAt}}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "edbc0381-7074-4586-bc1d-bbc11b219e42",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -240,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "[INSERT_SLACK_CHANNEL_ID]",
+          "mode": "id"
+        },
+        "text": "=:bell: *New Lead Received!*\n\n*Name:* {{$json.name}}\n*Email:* {{$json.email}}\n*Company:* {{$json.company}}\n*Message:* {{$json.message}}\n*Received:* {{$json.receivedAt}}",
+        "otherOptions": {}
+      },
+      "id": "8ace5a4c-ad6b-451e-bf6a-bd48300df13a",
+      "name": "Slack Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        -240,
+        64
+      ],
+      "webhookId": "290957f2-cfbc-4f76-b09f-6710b60d5394"
+    },
+    {
+      "parameters": {
+        "fromEmail": "[INSERT_SENDER_EMAIL]",
+        "toEmail": "={{$json.email}}",
+        "subject": "=Thanks for reaching out, {{$json.name}}! We'll be in touch shortly",
+        "html": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #222;\">\n  <h2 style=\"color: #2b2b2b;\">Hi {{$json.name}},</h2>\n  <p>Thanks for reaching out to us! We received your message and wanted to confirm it's already in the hands of our team.</p>\n  <p><strong>Here's a quick summary of what you sent us:</strong></p>\n  <table style=\"border-collapse: collapse; width: 100%; margin: 16px 0;\">\n    <tr><td style=\"padding: 6px 0; color: #666;\">Company</td><td style=\"padding: 6px 0;\">{{$json.company}}</td></tr>\n    <tr><td style=\"padding: 6px 0; color: #666; vertical-align: top;\">Message</td><td style=\"padding: 6px 0;\">{{$json.message}}</td></tr>\n  </table>\n  <p>Someone from our team will follow up with you shortly, typically within one business day.</p>\n  <p>Talk soon,<br/>The Team</p>\n</div>",
+        "options": {}
+      },
+      "id": "fe7ad57b-ec8f-43b4-9f0d-3a46076a38c7",
+      "name": "Send Follow-up Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        208
+      ],
+      "webhookId": "489c836f-893e-4a30-a61f-bd9ea6cc5c23"
+    }
+  ],
+  "connections": {
+    "Webhook - Lead Intake": {
+      "main": [
+        [
+          {
+            "node": "Parse Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6a4fb7309ec272498c35b90a277274821b383b367ab5a7e74d25ee4d63d1257e"
+  }
+}
